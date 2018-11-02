@@ -43,38 +43,65 @@ void limpiar(){
 }
 
 
-int agregar_msg(char *msg){
+void agregar_msg(int clave, char valor[MAX_CHARS]){
 
     if(OS_Windows){
 
     }else if(!OS_Windows){
 
-    }
-
-return 0;
-}
-
-void modificar_msg(int clave, char valor[MAX_CHARS]){
-
-    if(OS_Windows){
-
-    }else if(!OS_Windows){
-
-        // CREO QUE ESTE REALMENTE ES EL "AGREGAR MENSAJE"
-        
         char *p;
         int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
 
         p = shmat(varComp, NULL, 0);
         strcpy(p, valor);
         shmdt(p);
-        
 
     }
 
 }
 
-char* consultar_msg(int clave){
+void modificar_msg(int clave){
+
+    if(OS_Windows){
+
+    }else if(!OS_Windows){
+
+        char *p, valor[MAX_CHARS];
+        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
+        
+        p = shmat(varComp,NULL,0);
+
+        if(strcmp(p, "") == 0){
+            printf("No existen mensajes para modificar...");
+            esperar();
+
+        }else{
+
+            if(strstr(p, "(modificado)")){
+
+                // Aqui se deberia partir la cadena, eliminar el segmento "(modificado)" y permitir volver a modificar
+                printf("El mensaje ya fue modificado..");
+                esperar();
+
+            }else{
+
+                printf("Mensaje a modificar: %s\n", p);
+                printf("Modificar: ");
+                scanf("%s%*c", valor);
+                strcat(valor, " (modificado).");
+                strcpy(p, valor);
+
+            }
+            
+        }
+
+        shmdt(p);
+
+    }
+
+}
+
+void consultar_msg(int clave){
 
     if(OS_Windows){
 
@@ -86,7 +113,7 @@ char* consultar_msg(int clave){
         p = shmat(varComp,NULL,0);
 
         if(strcmp(p, "") == 0){
-            printf("Sin mensajes...");
+            printf("No existen mensajes para consultar...");
         }else{
             printf("%s", p);
         }
@@ -107,7 +134,14 @@ void destruir_msg(int clave){
         int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
 
         p = shmat(varComp,NULL,0);
-        strcpy(p, "");
+
+        if(strcmp(p, "") == 0){
+            printf("\nNo existen mensajes para eliminar...");
+        }else{
+            strcpy(p, "");
+            printf("\nMensaje eliminado...");
+        }
+
         shmdt(p);
 
     }

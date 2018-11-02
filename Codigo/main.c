@@ -17,23 +17,25 @@ void menu(int clave){
         printf("\n0.- Salir.");
 
         printf("\n\nIngresar la opcion: ");
+        setbuf(stdin,NULL);
         scanf("%i%*c", &r);
-        fflush(stdin);
+        
 
         switch(r){
 
             case 1:
-                limpiar();
-                // No entiendo que va aqui, ya que el metodo agregar mensaje, recibe un char *msg y nisiquiera recibe la clave
-                esperar();
+                //limpiar();
+                printf("\n");
+                printf("Ingrese mensaje: ");
+                setbuf(stdin,NULL);
+                scanf("%s%*c", valor);
+                agregar_msg(clave, valor);
             break;
 
             case 2:
                 //limpiar();
                 printf("\n");
-                printf("Ingrese mensaje: ");
-                scanf("%s%*c", valor);
-                modificar_msg(clave, valor);
+                modificar_msg(clave);
             break;
 
             case 3:
@@ -46,8 +48,6 @@ void menu(int clave){
             case 4:
                 //limpiar();
                 destruir_msg(clave);
-                printf("\n");
-                printf("Mensaje eliminado...");
                 esperar();    
             break;
 
