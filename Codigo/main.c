@@ -5,6 +5,7 @@ void menu(int clave){
     int r;
     char *msg = malloc(MAX_CHARS);
     char valor[MAX_CHARS];
+    int modified;
 
     do{ 
         
@@ -28,7 +29,7 @@ void menu(int clave){
                 printf("\n");
                 printf("Ingrese mensaje: ");
                 setbuf(stdin,NULL);
-                scanf("%s%*c", valor);
+                scanf("%[^\n]", valor);
                 agregar_msg(clave, valor);
             break;
 

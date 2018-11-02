@@ -67,7 +67,7 @@ void modificar_msg(int clave){
     }else if(!OS_Windows){
 
         char *p, valor[MAX_CHARS];
-        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
+        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666),posicion,i;
         
         p = shmat(varComp,NULL,0);
 
@@ -79,20 +79,25 @@ void modificar_msg(int clave){
 
             if(strstr(p, "(modificado)")){
 
-                // Aqui se deberia partir la cadena, eliminar el segmento "(modificado)" y permitir volver a modificar
-                printf("El mensaje ya fue modificado..");
-                esperar();
+                //extrae la posicion de la subcadena
+                posicion = strlen( p ) - strlen( strstr( p,"(modificado)" ) );
 
+                //copia en una nueva variable hasta donde está la subcadena
+                for(i = 0; i < posicion; i++ ){
+                    valor[ i ] = p[ i ];    
+                }   
+                //agrega el cierre de linea
+                valor[ i ] = '\0';
             }else{
 
-                printf("Mensaje a modificar: %s\n", p);
+                strcpy(valor,p);
+            }               
+
+                printf("Mensaje a modificar: %s\n", valor);
                 printf("Modificar: ");
-                scanf("%s%*c", valor);
+                scanf("%[^\n]", valor);//lee cadenas de texto con varias palabras
                 strcat(valor, " (modificado).");
                 strcpy(p, valor);
-
-            }
-            
         }
 
         shmdt(p);
