@@ -1,7 +1,10 @@
 #include "memcomp.h"
 
+#ifdef __unix__
 void menu(int clave){
-
+#elif defined(_WIN32) || defined(WIN32)
+void menu(char* clave){
+#endif
     int r;
     char *msg = malloc(MAX_CHARS);
     char valor[MAX_CHARS];
@@ -36,7 +39,10 @@ void menu(int clave){
             case 2:
                 //limpiar();
                 printf("\n");
-                modificar_msg(clave);
+                #ifdef __unix__
+				modificar_msg(clave);
+				#elif defined(_WIN32) || defined(WIN32)
+				#endif
             break;
 
             case 3:
@@ -48,7 +54,10 @@ void menu(int clave){
 
             case 4:
                 //limpiar();
+                #ifdef __unix__				
                 destruir_msg(clave);
+                #elif defined(_WIN32) || defined(WIN32)
+				#endif
                 esperar();    
             break;
 
@@ -73,11 +82,13 @@ void menu(int clave){
 
 int main(int argc, char** argv) {
 
-    int clave; // Clave identificadora de la sala del chat (en int por el momento)
-    printf("Ingresar el identificador de la sala (numero entero): ");
-    scanf("%i%*c", &clave);
+    char clave[20], salas[20][20];
+     // Clave identificadora de la sala del chat (en int por el momento)
+    printf("Ingresar el nombre de la sala, maximo 20 caracteres: ");
     fflush(stdin);
-
+    scanf("%[^\n]", clave);
+    printf("%s", clave);    
+    printf("%d", atoi(clave));
     menu(clave);
 
 	return 0;

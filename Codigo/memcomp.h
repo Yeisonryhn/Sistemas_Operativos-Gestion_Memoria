@@ -9,7 +9,7 @@
     #include <windows.h>
     #include <conio.h>
     #include <tchar.h>
-
+    
 #endif
 
 #include <stdio.h>
@@ -18,36 +18,34 @@
 #define MAX_CHARS 100 // Maximos caractes en el mensaje
 
 void esperar(){
-
-    if(OS_Windows){
+	
+    #elif defined(_WIN32) || defined(WIN32)
         system("pause");
 
-    }else if(!OS_Windows){
+    #ifdef __unix__
         printf("\nPulsa enter para continuar...");
         while(getchar()!='\n');
-
-    }
-    
+	#endif
+        
 }
 
 void limpiar(){
 
-    if(OS_Windows){
+    #elif defined(_WIN32) || defined(WIN32)
         system("cls");
 
-    }else if(!OS_Windows){
+    #ifdef __unix__
         system("clear");
 
-    }
+    #endif     
 
 }
 
-
+//---------------------------------METODO AGREGAR MENSAJE EN LINUX Y WINDOWS-----------------------------------------------------------------------
+#ifdef __unix__
 void agregar_msg(int clave, char valor[MAX_CHARS]){
-
-    if(OS_Windows){
-
-    }else if(!OS_Windows){
+	
+	//else if(!OS_Windows){
 
         char *p;
         int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
@@ -56,13 +54,71 @@ void agregar_msg(int clave, char valor[MAX_CHARS]){
         strcpy(p, valor);
         shmdt(p);
 
-    }
-
 }
 
+#elif defined(_WIN32) || defined(WIN32)
+void agregar_msg(char* clave, char valor[MAX_CHARS]){
+	
+        LPCTSTR p;       
+		HANDLE varComp;
+		varComp = CreateFileMapping( INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,sizeof(int),clave);
+
+        if(varComp != NULL){
+
+            p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(int));
+            CopyMemory((PVOID) p, valor, sizeof(TCHAR) * MAX_CHARS);
+            UnmapViewOfFile(p);
+
+        }else{
+             _tprintf(TEXT("Could not create file mapping object (%d).\n"),GetLastError());
+        }
+}
+#endif
+
+//---------------------------------METODO CONSULTAR MENSAJE EN LINUX Y WINDOWS------------------------------------------------------------------
+#ifdef __unix__
+void consultar_msg(int clave){
+
+	
+   		char *p, valor[MAX_CHARS];
+        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
+        
+        p = shmat(varComp,NULL,0);
+
+        if(strcmp(p, "") == 0){
+            printf("No existen mensajes para consultar...");
+        }else{
+            printf("%s", p);
+        }
+
+        shmdt(p);
+
+   
+        
+}
+#elif defined(_WIN32) || defined(WIN32)
+void consultar_msg(char clave[MAX_CHARS]){  
+		HANDLE varComp;
+		varComp = OpenFileMapping( FILE_MAP_ALL_ACCESS, FALSE, clave);
+		printf("funcion");
+		if(varComp != NULL){
+			
+			LPCTSTR p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_READ, 0, 0, sizeof(TCHAR) * MAX_CHARS);
+			printf("El valor actual es %s\n\n", p);
+			UnmapViewOfFile(p);
+		} }else{
+             _tprintf(TEXT("Could not access file mapping object (%d).\n"),GetLastError());
+        }
+}
+        
+#endif    
+
+//-------------------------------------LOS OTROS DOS METODOS QUE AUN NO SE HAN ARREGLADO ESTAN AQUI------------------------------------------------
+/*
 void modificar_msg(int clave){
 
     if(OS_Windows){
+
 
     }else if(!OS_Windows){
 
@@ -105,30 +161,11 @@ void modificar_msg(int clave){
     }
 
 }
+*/
 
-void consultar_msg(int clave){
 
-    if(OS_Windows){
 
-    }else if(!OS_Windows){  
-
-        char *p, valor[MAX_CHARS];
-        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
-        
-        p = shmat(varComp,NULL,0);
-
-        if(strcmp(p, "") == 0){
-            printf("No existen mensajes para consultar...");
-        }else{
-            printf("%s", p);
-        }
-
-        shmdt(p);
-        
-    }
-
-}
-
+/*
 void destruir_msg(int clave){
 
     if(OS_Windows){
@@ -151,4 +188,4 @@ void destruir_msg(int clave){
 
     }
 
-}
+}*/
