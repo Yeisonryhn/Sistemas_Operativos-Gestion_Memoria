@@ -42,6 +42,7 @@ void menu(char* clave){
                 #ifdef __unix__
 				modificar_msg(clave);
 				#elif defined(_WIN32) || defined(WIN32)
+				
 				#endif
             break;
 
@@ -57,6 +58,7 @@ void menu(char* clave){
                 #ifdef __unix__				
                 destruir_msg(clave);
                 #elif defined(_WIN32) || defined(WIN32)
+                
 				#endif
                 esperar();    
             break;

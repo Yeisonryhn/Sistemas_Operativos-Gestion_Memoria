@@ -19,23 +19,25 @@
 
 void esperar(){
 	
-    #elif defined(_WIN32) || defined(WIN32)
-        system("pause");
+    
 
     #ifdef __unix__
         printf("\nPulsa enter para continuar...");
         while(getchar()!='\n');
+    #elif defined(_WIN32) || defined(WIN32)
+        system("pause");
 	#endif
         
 }
 
 void limpiar(){
 
-    #elif defined(_WIN32) || defined(WIN32)
-        system("cls");
+    
 
     #ifdef __unix__
         system("clear");
+    #elif defined(_WIN32) || defined(WIN32)
+        system("cls");
 
     #endif     
 
@@ -114,7 +116,7 @@ void consultar_msg(char clave[MAX_CHARS]){
 #endif    
 
 //-------------------------------------LOS OTROS DOS METODOS QUE AUN NO SE HAN ARREGLADO ESTAN AQUI------------------------------------------------
-/*
+#ifdef __unix__
 void modificar_msg(int clave){
 
     if(OS_Windows){
@@ -161,11 +163,11 @@ void modificar_msg(int clave){
     }
 
 }
-*/
 
 
 
-/*
+
+
 void destruir_msg(int clave){
 
     if(OS_Windows){
@@ -188,4 +190,5 @@ void destruir_msg(int clave){
 
     }
 
-}*/
+}
+#endif
