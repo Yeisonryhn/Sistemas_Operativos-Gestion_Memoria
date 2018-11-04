@@ -1,14 +1,9 @@
 #include "memcomp.h"
 
-#ifdef __unix__
-void menu(int clave){
-#elif defined(_WIN32) || defined(WIN32)
-void menu(char* clave){
-#endif
+void menu(char clave[MAX_CLAVE]){
+
     int r;
-    char *msg = malloc(MAX_CHARS);
-    char valor[MAX_CHARS];
-    int modified;
+    char valor[MAX_MENSAJE];
 
     do{ 
         
@@ -26,43 +21,27 @@ void menu(char* clave){
         switch(r){
 
             case 1:
-            	
-                printf("\n");
-                printf("Ingrese mensaje: ");
-                setbuf(stdin,NULL);
-                scanf("%[^\n]", valor);
-                agregar_msg(clave, valor);
-                
+                agregar_msg(clave);
             break;
 
             case 2:
-            	
-                printf("\n");
-                modificar_msg(clave);
-												
+                modificar_msg(clave);				
             break;
 
             case 3:
-                
-				printf("\n");
                 consultar_msg(clave);  
-            
 			break;
 
             case 4:
-                
 				destruir_msg(clave);
-            
 			break;
 
             case 0:
-            	
                 limpiar();
-            
 			break;
 
             default:
-            	
+
                 limpiar();
                 printf("Opcion incorrecta, vuelve a intentarlo.\n");
                 esperar();
@@ -76,19 +55,27 @@ void menu(char* clave){
 }
 
 int main(int argc, char** argv) {
+	
+    char clave[MAX_CLAVE];
 
-    char clave[20], salas[20][20];
-     // Clave identificadora de la sala del chat (en int por el momento)
-    printf("Ingresar el nombre de la sala, maximo 20 caracteres: ");
-    fflush(stdin);
-    scanf("%[^\n]", clave);
-    //FALTA ARREGLAR QUE EN LINUX LA CLAVE DE LA MEMORIA COMPARTIDA SEA UNA CADENA 
-    //ES POR ESTO QUE AUN SE HACE LO SIGUIENTE
-    #ifdef __unix__
-    menu(atoi(clave));
-    #elif defined(_WIN32) || defined(WIN32)
+    while(1){
+
+        limpiar();
+        printf("Ingresar el nombre de la sala, maximo %i caracteres: ", MAX_CLAVE);
+        fflush(stdin);
+        scanf("%[^\n]%*c", clave);
+
+        if(strlen(clave) > MAX_CLAVE){
+            printf("\nNo se puede crear una sala con un nombre tan grande...");
+            esperar();
+
+        }else{
+            break;
+        }
+
+    };
+
     menu(clave);
-    #endif
 
-	return 0;
+    return 0;
 }

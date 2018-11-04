@@ -1,29 +1,66 @@
-#ifdef __unix__
-    #define OS_Windows 0
-    #include <sys/types.h>
-    #include <sys/ipc.h>
-    #include <sys/shm.h>
-    
-#elif defined(_WIN32) || defined(WIN32)
-    #define OS_Windows 1
-    #include <windows.h>
-    #include <conio.h>
-    #include <tchar.h>
-    
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define MAX_CHARS 100 // Maximos caractes en el mensaje
+
+#define MAX_MENSAJE 10      // caracteres maximos para el mensaje compartido
+#define edit 15             // caracteres adicionales para el (modificado)
+
+#ifdef __unix__
+
+    #include <sys/types.h>
+    #include <sys/ipc.h>
+    #include <sys/shm.h>
+
+    #define MAX_CLAVE 4 
+
+    int convertir(char clave[MAX_CLAVE]){
+
+        char mensaje[MAX_CLAVE + 6], aux[MAX_CLAVE], letra[2];
+        static char num [] = "0123456789abcdefghijklmnopqrstuvwxyz";
+        int i, j, xClave, xNum;
+
+        xClave = strlen(clave);
+        xNum = strlen(num);
+
+        strcpy(mensaje, "");
+        for(i=0; i<xClave; i++){
+            for(j=0; j<xNum; j++){
+
+                if(clave[i] == num[j]){
+                    sprintf(letra, "%i", j);
+                    strcat(mensaje, letra);
+                }
+
+            }
+
+        }
+
+        return atoi(mensaje);
+    }
+
+#elif defined(_WIN32) || defined(WIN32)
+
+    #include <windows.h>
+    #include <conio.h>
+    #include <tchar.h>
+
+    #define MAX_CLAVE 5
+    
+#endif
 
 void esperar(){
 	
     #ifdef __unix__
+
         printf("\nPulsa enter para continuar...");
         while(getchar()!='\n');
+
     #elif defined(_WIN32) || defined(WIN32)
+		
+		printf("\n");
         system("pause");
+
 	#endif
         
 }
@@ -31,252 +68,270 @@ void esperar(){
 void limpiar(){
 
     #ifdef __unix__
+
         system("clear");
+
     #elif defined(_WIN32) || defined(WIN32)
+
         system("cls");
+
     #endif     
 
 }
 
-#ifdef __unix__
-//-----------------------------------------------------------------------UNIX-----------------------------------------------------------------------
+
 //AGREGAR
-void agregar_msg(int clave, char valor[MAX_CHARS]){
-	
-	char *p;
-    int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
-    p = shmat(varComp, NULL, 0);
-    strcpy(p, valor);
-    shmdt(p);
-    printf("Mensaje agregado\n");
-    esperar();
+void agregar_msg(char key[MAX_CLAVE]){
+
+    char mensaje[MAX_MENSAJE];
+
+    printf("\nIngrese mensaje (maximo de %i caracteres).\n>: ", MAX_MENSAJE);
+    fflush(stdin);
+    scanf("%[^\n]%*c", mensaje);
+
+    if(strlen(mensaje) > MAX_MENSAJE){
+        printf("\nNo se puede enviar un mensaje tan grande...");
+        esperar();
+
+    }else{
+
+        #ifdef __unix__
+
+            int clave = convertir(key);
+            char *p;
+            int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
+
+            p = shmat(varComp, NULL, 0);
+            strcpy(p, mensaje);
+
+            shmdt(p);
+
+        #elif defined(_WIN32) || defined(WIN32)
+			
+            LPCTSTR p;       
+            HANDLE varComp;
+            varComp = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(int), key);
+
+            if(varComp != NULL){
+
+                p = (LPTSTR)MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(int));
+                CopyMemory((PVOID) p, mensaje, sizeof(CHAR) * MAX_MENSAJE);
+                UnmapViewOfFile(p);
+                
+            }else{
+                
+                _tprintf(TEXT("Could not create file mapping object (%d).\n"), GetLastError());
+                
+            }
+            
+        #endif
+
+        printf("\nMensaje agregado...");
+        esperar();
+        
+    }    
 
 }
+
 //CONSULTAR
-void consultar_msg(int clave){
+void consultar_msg(char key[MAX_CLAVE]){
+	
+	#ifdef __unix__
+	
+	    int clave = convertir(key);
+	    char *p;
+	    int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);   
 
-	char *p, valor[MAX_CHARS];
-    int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);        
-    p = shmat(varComp,NULL,0);
-
-    if(strcmp(p, "") == 0){
-    	
-        printf("No existen mensajes para consultar...\n");
-        
+    	p = shmat(varComp,NULL,0);
+	
+	#elif defined(_WIN32) || defined(WIN32)
+		
+		LPCTSTR p;
+		HANDLE varComp;
+	    varComp = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, key);
+	    
+	    if(varComp != NULL){
+            p = (LPTSTR)MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(CHAR) * (MAX_MENSAJE + edit));
+         
+        }else{
+            
+            _tprintf(TEXT("\nNo existen mensajes para consultar..."),GetLastError());
+            esperar();
+            return;
+            
+        }
+	
+	#endif
+	
+	if(strcmp(p, "") == 0){
+                
+    	printf("\nNo existen mensajes para consultar...");
+                
     }else{
-    	
-        printf("%s", p);
+        
+        printf("** Mensaje **\n%s\n", p);
+        
+        #ifdef __unix__
+        	shmdt(p); 
+        #elif defined(_WIN32) || defined(WIN32)
+        	UnmapViewOfFile(p);
+        #endif
         
     }
 	
-	esperar();
-    shmdt(p);  
-        
+	esperar();	 
+
 }
+
 //MODIFICAR
-void modificar_msg(int clave){  
-
-    char *p, valor[MAX_CHARS];
-    int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666),posicion,i;
-    p = shmat(varComp,NULL,0);
-
-    if(strcmp(p, "") == 0){
+void modificar_msg(char key[MAX_CLAVE]){
+	
+	char mensaje[MAX_MENSAJE], aux[MAX_MENSAJE + edit];
+    int posicion, i;
+    
+    #ifdef __unix__
     	
-        printf("No existen mensajes para modificar...\n");
+    	char *p;
+        int clave = convertir(key);
+        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
         
-    }else{
+        p = shmat(varComp,NULL,0);
     	
-        if(strstr(p, "(modificado)")){
-            //extrae la posicion de la subcadena
-            posicion = strlen( p ) - strlen( strstr( p,"(modificado)" ) );
-            //copia en una nueva variable hasta donde está la subcadena
-            for(i = 0; i < posicion; i++ ){
-            	
-                valor[ i ] = p[ i ];   
-				 
-            }   
-            //agrega el cierre de linea
-            valor[ i ] = '\0';
+    #elif defined(_WIN32) || defined(WIN32)
+    	
+		LPCTSTR p;
+    	HANDLE varComp = OpenFileMapping( FILE_MAP_ALL_ACCESS, FALSE, key);
+        
+        if(varComp != NULL){
+            p = (LPTSTR)MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR)*(MAX_MENSAJE + edit));
             
         }else{
         	
-            strcpy(valor,p);
-            
-        }         
-		      
-            printf("Mensaje a modificar: %s\n", valor);
-            printf("Modificar: ");
-            scanf("%[^\n]", valor);//lee cadenas de texto con varias palabras
-            strcat(valor, " (modificado).");
-            strcpy(p, valor);
-            printf("El Mensaje ha sido modificado: %s\n\n", valor);
-            
-    }
-    
-	esperar();
-    shmdt(p);
-    
-}
-//ELIMINAR
-void destruir_msg(int clave){
-
-    char *p;
-    int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
-    p = shmat(varComp,NULL,0);
+        	printf("\nNo se puede editar el mensaje...");
+	        esperar();
+        	return;
+		}
+		
+    #endif
     
     if(strcmp(p, "") == 0){
-    	
-	    printf("\nNo existen mensajes para eliminar...\n");
-	    
+                
+        printf("\nNo existen mensajes para modificar...");
+        esperar();
+        return;
+
     }else{
-    	
-        strcpy(p, "");
-        printf("\nMensaje eliminado...\n");
-    }
-    
-    esperar();
-    shmdt(p);
-}
+        
+        if(strstr(p, "(modificado)")){
+            
+            posicion = strlen(p) - strlen(strstr(p, "(modificado)"));
+            
+            for(i=0; i<posicion; i++){
+                
+                mensaje[i] = p[i];
 
-#elif defined(_WIN32) || defined(WIN32)
-//-----------------------------------------------------------------WINDOWS--------------------------------------------------------------------------
-//AGREGAR
-void agregar_msg(char* clave, char valor[MAX_CHARS]){
-	
-    LPCTSTR p;       
-	HANDLE varComp;
-	varComp = CreateFileMapping( INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,sizeof(int),clave);
-
-    if(varComp != NULL){
-
-        p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(int));
-        CopyMemory((PVOID) p, valor, sizeof(TCHAR) * MAX_CHARS);
-        UnmapViewOfFile(p);
-		printf("Mensaje agregado\n");
-		
-    }else{
-    	
-        _tprintf(TEXT("Could not create file mapping object (%d).\n"),GetLastError());
+            }
+            
+            mensaje[i] = '\0';
+            
+        }else{
+            
+            strcpy(mensaje, p);
+            
+        }
         
     }
     
-    esperar();
-    
-}
-//CONSULTAR
-void consultar_msg(char clave[MAX_CHARS]){  
+    while(1){
 
-	HANDLE varComp;
-	varComp = OpenFileMapping( FILE_MAP_ALL_ACCESS, FALSE, clave);
-		
-	if(varComp != NULL){
-			
-		LPCTSTR p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR) * MAX_CHARS);
-		
-		if(strcmp(p, "") == 0){
-			
-			printf("No existen mensajes para consultar...\n");
-			
-		}else{
-			
-			printf("El valor actual es %s\n\n", p);
-			UnmapViewOfFile(p);
-			
-		}
-			
-	}else{
-		
-        _tprintf(TEXT("No existen mensajes para consultar...\n"),GetLastError());
-        
-    }
-    
-    esperar();
-    
-}
-//MODIFICAR
-void modificar_msg(char clave[MAX_CHARS]){  
-
-	HANDLE varComp;		
-	varComp = OpenFileMapping( FILE_MAP_ALL_ACCESS, FALSE, clave);
-	int posicion,i;
-	char valor[MAX_CHARS];
+	    limpiar();
+	    printf("NOTA: El nuevo mensaje no debe contener mas de %i caracteres.\n** Mensaje a modificar **\n%s\n\n", MAX_MENSAJE, mensaje);
+	    printf("** Modificar **\n>: ");
+	    scanf("%[^\n]%*c", aux);  //lee cadenas de texto con varias palabras
 	
-	if(varComp != NULL){
-				
-		LPCTSTR p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR) * MAX_CHARS);
-		
-		if(strcmp(p, "") == 0){
-			
-	        printf("No existen mensajes para modificar...\n");
+	    if(strlen(aux) > MAX_MENSAJE){
+	        printf("\nNo se puede editar el mensaje...");
+	        esperar();
+	
 	    }else{
 	    	
-				
-			if(strstr(p, "(modificado)")){
-				
-				posicion = strlen( p ) - strlen( strstr( p,"(modificado)" ) );
-				
-				for(i = 0; i < posicion; i++ ){
-					
-	                valor[ i ] = p[ i ];    
-	            }
-	            
-	            valor[ i ] = '\0';
-	            
-			}else{
-				
-				strcpy(valor,p);
-				
-			}
-					
-			printf("Mensaje a modificar: %s\n\n", valor);
-			printf("Modificar: ");
-	        scanf("%[^\n]", valor);//lee cadenas de texto con varias palabras
-	        strcat(valor, " (modificado).");
-	        CopyMemory((PVOID) p, valor, sizeof(TCHAR) * MAX_CHARS);
-	        printf("El Mensaje ha sido modificado: %s\n\n", valor);
+	    	strcat(aux, " (modificado)");
+	    	
+	    	#ifdef __unix__
+	    		
+	    		strcpy(p, aux);
+	    		shmdt(p);
+	    		
+	    	#elif defined(_WIN32) || defined(WIN32)
+	    		
+	    		CopyMemory((PVOID) p, aux, sizeof(CHAR)*(MAX_MENSAJE + edit));
+	    		UnmapViewOfFile(p);	
+	    	
+	    	#endif
+	
+	        printf("\nEl Mensaje ha sido modificado...");
+	        esperar();
+	        break;
 	        
 	    }
-	    
-		UnmapViewOfFile(p);	
-		
-	}else{
-		
-        _tprintf(TEXT("No existen mensajes para modificar...\n"),GetLastError());
-        
-    }
-        
-    esperar();
-}
-//ELIMINAR
-void destruir_msg(char clave[MAX_CHARS]){ 
- 
-	HANDLE varComp;		
-	varComp = OpenFileMapping( FILE_MAP_ALL_ACCESS, FALSE, clave);
-	char valor[MAX_CHARS];
+
+	};	
 	
-	if(varComp != NULL){
-				
-		LPCTSTR p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR) * MAX_CHARS);
-		
-		if(strcmp(p, "") == 0){
-			
-			printf("\nNo existen mensajes para eliminar...\n");	
-			            
-		}else{
-			
-			strcpy(valor,"");
-			
-		}
-		
-		CopyMemory((PVOID) p, valor, sizeof(TCHAR) * MAX_CHARS);
-		UnmapViewOfFile(p);	
-		esperar();
-		
-	}else{
-		
-        _tprintf(TEXT("No existen mensajes para eliminar.\n"),GetLastError());
-        esperar();
-        
-    }
 }
-#endif
+
+//ELIMINAR
+void destruir_msg(char key[MAX_CLAVE]){
+	
+	#ifdef __unix__
+	
+		char *p;
+        int clave = convertir(key);
+        int varComp = shmget((key_t) clave, sizeof(int), IPC_CREAT|0666);
+
+        p = shmat(varComp,NULL,0);
+		
+	#elif defined(_WIN32) || defined(WIN32)
+	
+		LPCTSTR p;
+        HANDLE varComp;		
+        varComp = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, key);
+        
+        if(varComp != NULL){
+        	
+            p = (LPTSTR) MapViewOfFile(varComp, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR)*MAX_CLAVE);
+    
+        }else{
+            
+            _tprintf(TEXT("\nNo existen mensajes para eliminar..."), GetLastError());
+            esperar();
+            return;
+            
+        }
+	
+	#endif
+	
+    if(strcmp(p, "") == 0){
+
+        printf("\nNo existen mensajes para eliminar...");
+        
+    }else{
+
+        strcpy(p, "");
+        printf("\nMensaje eliminado...");
+        
+        #ifdef __unix__
+	    		
+    		strcpy(p, "");
+    		shmdt(p);
+    		
+	    #elif defined(_WIN32) || defined(WIN32)
+	    		
+    		CopyMemory((PVOID) p, "", sizeof(CHAR)*(MAX_MENSAJE + edit));
+    		UnmapViewOfFile(p);	
+	    	
+	   	#endif
+    }
+    
+    esperar();
+	
+}
