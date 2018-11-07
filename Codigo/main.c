@@ -15,8 +15,8 @@ void menu(char clave[MAX_CLAVE]){
         printf("\n4.- Eliminar mensaje.");
         printf("\n0.- Salir.");
         printf("\n\nIngresar la opcion: ");
-        setbuf(stdin,NULL);
-        scanf("%i%*c", &r);        
+        fflush(stdin);
+        scanf("%i%*c", &r);
 
         switch(r){
 
@@ -41,7 +41,7 @@ void menu(char clave[MAX_CLAVE]){
 			break;
 
             default:
-
+                
                 limpiar();
                 printf("Opcion incorrecta, vuelve a intentarlo.\n");
                 esperar();

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_MENSAJE 10      // caracteres maximos para el mensaje compartido
+#define MAX_MENSAJE 200     // caracteres maximos para el mensaje compartido
 #define edit 15             // caracteres adicionales para el (modificado)
 
 #ifdef __unix__
@@ -45,7 +45,7 @@
     #include <conio.h>
     #include <tchar.h>
 
-    #define MAX_CLAVE 5
+    #define MAX_CLAVE 4
     
 #endif
 
